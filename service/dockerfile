@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+FROM golang:1.21 as builder
+
+WORKDIR /app
+
+# Install protoc and Go plugins
+RUN apt-get update && apt-get install -y protobuf-compiler && \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Generate the protobuf files
+RUN protoc --go_out=. --go-grpc_out=. service/proto/user.proto
+
+# Build the Go application for ARM64 architecture
+RUN GOARCH=arm64 go build -o /user-service ./service/user
+
+# Final stage
+FROM golang:1.21
+
+WORKDIR /app
+
+COPY --from=builder /user-service /user-service
+
+# Ensure the binary has execute permissions
+RUN chmod +x /user-service
+
+ENTRYPOINT ["/user-service"]
+
+
+
+
+

@@ -1,0 +1,23 @@
+FROM golang:1.21
+
+WORKDIR /app
+
+# Copy go.mod and go.sum files
+COPY ../go.mod ../go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the rest of the application code
+COPY . .
+
+# Tidy up the modules
+RUN go mod tidy
+
+# Build the application
+RUN go build -o api-gateway ./api-gateway
+
+EXPOSE 8080
+
+CMD ["./api-gateway"]
+
